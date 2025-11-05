@@ -28,29 +28,49 @@ LIBS = -lcbp -lz
 FLAGS = -std=c++17 -L./lib $(LIBS) $(OPT)
 CPPFLAGS = -std=c++17 $(OPT)
 
-OBJ = cond_branch_predictor_interface.o my_cond_branch_predictor.o
-DEPS = cbp.h cond_branch_predictor_interface.h my_cond_branch_predictor.h
-
 DEBUG=0
 ifeq ($(DEBUG), 1)
 	CC += -ggdb3
 endif
 
+# Target-specific object files and dependencies
+EXAMPLE_OBJ = cond_branch_predictor_interface.o my_cond_branch_predictor.o
+EXAMPLE_DEPS = cbp.h my_cond_branch_predictor.h
 
-.PHONY: clean lib
+ALWAYS_TAKEN_OBJ = always_taken_bp_interface.o always_taken.o
+ALWAYS_TAKEN_DEPS = cbp.h always_taken.h
 
-all: cbp
+.PHONY: clean lib example always_taken
+
+all: example
 
 lib:
 	make -C $@ DEBUG=$(DEBUG)
 
-cbp: $(OBJ) | lib
+# Example target (original my_cond_branch_predictor)
+example: cbp_example
+
+cbp_example: $(EXAMPLE_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
-%.o: %.cc $(DEPS)
+cond_branch_predictor_interface.o: cond_branch_predictor_interface.cc $(EXAMPLE_DEPS)
 	$(CC) $(FLAGS) -c -o $@ $<
 
+my_cond_branch_predictor.o: my_cond_branch_predictor.cc $(EXAMPLE_DEPS)
+	$(CC) $(FLAGS) -c -o $@ $<
+
+# Always taken target
+always_taken: cbp_always_taken
+
+cbp_always_taken: $(ALWAYS_TAKEN_OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
+always_taken_bp_interface.o: always_taken_bp_interface.cc $(ALWAYS_TAKEN_DEPS)
+	$(CC) $(FLAGS) -c -o $@ $<
+
+always_taken.o: always_taken.cc $(ALWAYS_TAKEN_DEPS)
+	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o cbp
+	rm -f *.o cbp_example cbp_always_taken
 	make -C lib clean
