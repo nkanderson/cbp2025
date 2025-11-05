@@ -40,6 +40,9 @@ D_DEPS = cbp.h datagen_interface.h my_cond_branch_predictor.h
 ALWAYS_TAKEN_OBJ = always_taken_bp_interface.o always_taken.o
 ALWAYS_TAKEN_DEPS = cbp.h always_taken.h
 
+PERCEPTRON_OBJ = perceptron_interface.o perceptron.o
+PERCEPTRON_DEPS = cbp.h perceptron.h
+
 DEBUG=0
 ifeq ($(DEBUG), 1)
 	CC += -ggdb3
@@ -55,7 +58,12 @@ ifeq ($(MAKECMDGOALS),always_taken)
     DEPS = $(ALWAYS_TAKEN_DEPS)
 endif
 
-.PHONY: clean lib data example always_taken
+ifeq ($(MAKECMDGOALS),perceptron)
+    OBJ = $(PERCEPTRON_OBJ)
+    DEPS = $(PERCEPTRON_DEPS)
+endif
+
+.PHONY: clean lib data example always_taken perceptron
 
 # Default to building the provided example
 all: example
@@ -79,10 +87,16 @@ always_taken: cbp_always_taken
 cbp_always_taken: $(OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
+# Perceptron target
+perceptron: cbp_perceptron
+
+cbp_perceptron: $(PERCEPTRON_OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
 # Generic rule for building object files
 %.o: %.cc $(DEPS)
 	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o cbp_example cbp_data cbp_always_taken
+	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron
 	make -C lib clean
