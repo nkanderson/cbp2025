@@ -29,6 +29,7 @@
 
 // Global file instance 
 std::ofstream outfile;
+int initLineCnt;
 
 //
 // beginCondDirPredictor()
@@ -44,6 +45,7 @@ void beginCondDirPredictor()
 
     // Create csv file to store global branch history and resolved branch direction
     outfile.open("branch_history_log.csv", std::ios::app);
+    initLineCnt = 64;
 }
 
 //
@@ -109,8 +111,12 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
     if(inst_class == InstClass::condBranchInstClass)
     {
         // Log current history with resolved direction (GHR, Resolve Direction, Predicted Direction)
-        outfile << (resolve_dir ? B_TAKEN : B_NOT_TAKEN) << "," << pred_dir << "," << 
-        (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << "\n";
+        if (initLineCnt == 0) {
+            outfile << (resolve_dir ? B_TAKEN : B_NOT_TAKEN) << "," << pred_dir << "," << 
+            (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << "\n";
+        } else {
+            initLineCnt -= 1;
+        }
 
         cbp2016_tage_sc_l.history_update(seq_no, piece, pc, br_type, pred_dir, resolve_dir, next_pc);
         cond_predictor_impl.history_update(seq_no, piece, pc, resolve_dir, next_pc);

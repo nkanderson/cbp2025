@@ -40,7 +40,7 @@ ifeq ($(DEBUG), 1)
 	CC += -ggdb3
 endif
 
-ifeq ($(MAKECMDGOALS),data)
+ifeq ($(MAKECMDGOALS),cbp_data)
     OBJ = $(D_OBJ)
     DEPS = $(D_DEPS)
 endif
@@ -59,8 +59,9 @@ cbp: $(OBJ) | lib
 %.o: %.cc $(DEPS)
 	$(CC) $(FLAGS) -c -o $@ $<
 
-data: cbp
+cbp_data: $(OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
 
 clean:
-	rm -f *.o cbp
+	rm -f *.o cbp cbp_data
 	make -C lib clean
