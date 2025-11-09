@@ -8,7 +8,7 @@
 #include <vector>
 
 // Perceptron configuration constants
-static constexpr size_t PERCEPTRON_TABLE_SIZE = 2048;
+static constexpr size_t PERCEPTRON_TABLE_SIZE = 1024;
 static constexpr size_t HISTORY_LENGTH = 62;
 static constexpr size_t WEIGHTS_PER_PERCEPTRON =
     HISTORY_LENGTH + 1; // +1 for bias at index 0
@@ -39,6 +39,13 @@ class PerceptronPredictor {
   // Each entry contains bias (index 0) + 62 weights (indices 1-62)
   std::array<Perceptron, PERCEPTRON_TABLE_SIZE> perceptron_table;
 
+  // Checkpoint map: stores the history state at prediction time for each
+  // in-flight branch
+  // Key: unique instruction ID (seq_no, piece)
+  // Value: history at prediction time
+  std::unordered_map<uint64_t /*inst_id*/, uint64_t /*history*/>
+      pred_time_histories;
+
 public:
   PerceptronPredictor(void);
 
@@ -57,6 +64,9 @@ public:
 private:
   // Helper function to map PC to perceptron table index
   size_t get_perceptron_index(uint64_t PC) const;
+
+  // Helper function to get unique instruction ID from seq_no and piece
+  uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece) const;
 };
 
 // Global predictor instance

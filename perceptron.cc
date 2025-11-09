@@ -25,7 +25,19 @@ size_t PerceptronPredictor::get_perceptron_index(uint64_t PC) const {
   return PC % PERCEPTRON_TABLE_SIZE;
 }
 
+uint64_t PerceptronPredictor::get_unique_inst_id(uint64_t seq_no,
+                                                 uint8_t piece) const {
+  // Combine seq_no and piece into a unique 64-bit ID
+  // piece is 4 bits (0-15), so we shift seq_no left by 4 bits
+  return (seq_no << 4) | (piece & 0x0F);
+}
+
 bool PerceptronPredictor::predict(uint64_t seq_no, uint8_t piece, uint64_t PC) {
+  // CHECKPOINT: Save current history for this instruction instance
+  // This allows us to retrieve the exact history state later during training
+  uint64_t inst_id = get_unique_inst_id(seq_no, piece);
+  pred_time_histories[inst_id] = global_history;
+
   // Get the perceptron for this PC
   size_t index = get_perceptron_index(PC);
   const Perceptron &perceptron = perceptron_table[index];
@@ -64,16 +76,22 @@ void PerceptronPredictor::history_update(uint64_t seq_no, uint8_t piece,
 void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
                                  bool resolveDir, bool predDir,
                                  uint64_t nextPC) {
+
+  // RETRIEVE: Get the checkpointed history from prediction time
+  uint64_t inst_id = get_unique_inst_id(seq_no, piece);
+  uint64_t prediction_time_history = pred_time_histories.at(inst_id);
+
   // Get the perceptron for this PC
   size_t index = get_perceptron_index(PC);
   Perceptron &perceptron = perceptron_table[index];
 
-  // Calculate the perceptron output using CURRENT history
-  // (the history that was used to make the original prediction)
+  // Calculate the perceptron output using PREDICTION-TIME history
+  // (NOT the current global_history, which may have been updated by other
+  // branches)
   int32_t output = perceptron.weights[0]; // Start with bias
 
   for (size_t i = 0; i < HISTORY_LENGTH; i++) {
-    bool history_bit = (global_history >> i) & 1;
+    bool history_bit = (prediction_time_history >> i) & 1;
     if (history_bit) {
       output += perceptron.weights[i + 1];
     } else {
@@ -102,9 +120,9 @@ void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
       }
     }
 
-    // Update weights based on correlation with history
+    // Update weights based on correlation with PREDICTION-TIME history
     for (size_t i = 0; i < HISTORY_LENGTH; i++) {
-      bool history_bit = (global_history >> i) & 1;
+      bool history_bit = (prediction_time_history >> i) & 1;
 
       // Increment weight if:
       // - resolveDir == taken AND history_bit == taken (both 1)
@@ -126,7 +144,10 @@ void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
     }
   }
 
-  // Update global history AFTER training (so we train with the correct history)
+  // CLEANUP: Remove the checkpoint for this instruction (no longer needed)
+  pred_time_histories.erase(inst_id);
+
+  // Update global history AFTER training
   // Shift global history left and insert new outcome at LSB (bit 0)
   global_history = (global_history << 1) | (resolveDir ? 1 : 0);
 
