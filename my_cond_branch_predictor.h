@@ -33,6 +33,11 @@ class SampleCondPredictor
         {
         }
 
+        uint64_t get_ghist() const
+        {
+            return active_hist.ghist;
+        }
+
         // sample function to get unique instruction id
         uint64_t get_unique_inst_id(uint64_t seq_no, uint8_t piece) const
         {
