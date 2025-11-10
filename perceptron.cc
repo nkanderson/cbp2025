@@ -32,9 +32,12 @@ uint64_t PerceptronPredictor::get_unique_inst_id(uint64_t seq_no,
   return (seq_no << 4) | (piece & 0x0F);
 }
 
+// See Jiménez and Lin paper, sections 3.2 and 3.5 for prediction algorithm
 bool PerceptronPredictor::predict(uint64_t seq_no, uint8_t piece, uint64_t PC) {
   // CHECKPOINT: Save current history for this instruction instance
-  // This allows us to retrieve the exact history state later during training
+  // This allows us to retrieve the exact history state later during training.
+  // The method for maintaining and retreiving checkpointed histories is
+  // modelled on the example in my_cond_branch_predictor.
   uint64_t inst_id = get_unique_inst_id(seq_no, piece);
   pred_time_histories[inst_id] = global_history;
 
@@ -62,6 +65,8 @@ bool PerceptronPredictor::predict(uint64_t seq_no, uint8_t piece, uint64_t PC) {
   return output >= 0;
 }
 
+// NOTE: We need to update the history only after training is done,
+// so this function should be used with care.
 void PerceptronPredictor::history_update(uint64_t seq_no, uint8_t piece,
                                          uint64_t PC, bool taken,
                                          uint64_t nextPC) {
@@ -73,6 +78,7 @@ void PerceptronPredictor::history_update(uint64_t seq_no, uint8_t piece,
   global_history &= ((1ULL << HISTORY_LENGTH) - 1);
 }
 
+// See Jiménez and Lin paper, sections 3.3 and 3.5 for training algorithm
 void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
                                  bool resolveDir, bool predDir,
                                  uint64_t nextPC) {
@@ -148,11 +154,7 @@ void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
   pred_time_histories.erase(inst_id);
 
   // Update global history AFTER training
-  // Shift global history left and insert new outcome at LSB (bit 0)
-  global_history = (global_history << 1) | (resolveDir ? 1 : 0);
-
-  // Mask to keep only the lower HISTORY_LENGTH bits (62 bits)
-  global_history &= ((1ULL << HISTORY_LENGTH) - 1);
+  history_update(seq_no, piece, PC, resolveDir, nextPC);
 }
 
 // Global predictor instance
