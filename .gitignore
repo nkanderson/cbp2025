@@ -29,5 +29,6 @@
 cbp
 cbp_*
 
-# Results
+# Results & data
 sample_results/
+branch_history_log.csv
