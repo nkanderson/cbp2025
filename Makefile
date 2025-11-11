@@ -28,12 +28,20 @@ LIBS = -lcbp -lz
 FLAGS = -std=c++17 -L./lib $(LIBS) $(OPT)
 CPPFLAGS = -std=c++17 $(OPT)
 
+# Default object files and dependencies
 OBJ = cond_branch_predictor_interface.o my_cond_branch_predictor.o
 DEPS = cbp.h cond_branch_predictor_interface.h my_cond_branch_predictor.h
 
+# Target-specific object files and dependencies
 # Data generation dependencies
 D_OBJ = datagen_interface.o my_cond_branch_predictor.o
 D_DEPS = cbp.h datagen_interface.h my_cond_branch_predictor.h
+
+ALWAYS_TAKEN_OBJ = always_taken_bp_interface.o always_taken.o
+ALWAYS_TAKEN_DEPS = cbp.h always_taken.h
+
+PERCEPTRON_OBJ = perceptron_interface.o perceptron.o
+PERCEPTRON_DEPS = cbp.h perceptron.h
 
 DEBUG=0
 ifeq ($(DEBUG), 1)
@@ -45,23 +53,50 @@ ifeq ($(MAKECMDGOALS),cbp_data)
     DEPS = $(D_DEPS)
 endif
 
+ifeq ($(MAKECMDGOALS),always_taken)
+    OBJ = $(ALWAYS_TAKEN_OBJ)
+    DEPS = $(ALWAYS_TAKEN_DEPS)
+endif
 
-.PHONY: clean lib data
+ifeq ($(MAKECMDGOALS),perceptron)
+    OBJ = $(PERCEPTRON_OBJ)
+    DEPS = $(PERCEPTRON_DEPS)
+endif
 
-all: cbp
+.PHONY: clean lib data example always_taken perceptron
+
+# Default to building the provided example
+all: example
 
 lib:
 	make -C $@ DEBUG=$(DEBUG)
 
-cbp: $(OBJ) | lib
+# Example target (original my_cond_branch_predictor)
+example: cbp_example
+
+cbp_example: $(OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
-%.o: %.cc $(DEPS)
-	$(CC) $(FLAGS) -c -o $@ $<
-
+# Training data generation target
 cbp_data: $(OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
+# Always taken target
+always_taken: cbp_always_taken
+
+cbp_always_taken: $(OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
+# Perceptron target
+perceptron: cbp_perceptron
+
+cbp_perceptron: $(PERCEPTRON_OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
+# Generic rule for building object files
+%.o: %.cc $(DEPS)
+	$(CC) $(FLAGS) -c -o $@ $<
+
 clean:
-	rm -f *.o cbp cbp_data
+	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron
 	make -C lib clean
