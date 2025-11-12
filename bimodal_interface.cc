@@ -29,7 +29,7 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// This file provides a perceptron predictor integration based on the
+// This file provides a bimodal predictor integration based on the
 // interface provided.
 
 #include "lib/sim_common_structs.h"
@@ -113,10 +113,7 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc,
   }
 
   if (inst_class == InstClass::condBranchInstClass) {
-    // For perceptron predictor, we update history in the update() method
-    // after training, to ensure we train with the correct history
-    // perceptron_predictor_impl.history_update(seq_no, piece, pc, resolve_dir,
-    //                                          next_pc);
+    // No history is tracked in the bimodal predictor
   }
 }
 
