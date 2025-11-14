@@ -102,7 +102,7 @@ cbp_perceptron: $(PERCEPTRON_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
 # Bimodal target
-perceptron: cbp_bimodal
+bimodal: cbp_bimodal
 
 cbp_bimodal: $(BIMODAL_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
