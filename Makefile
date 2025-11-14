@@ -43,6 +43,9 @@ ALWAYS_TAKEN_DEPS = cbp.h always_taken.h
 PERCEPTRON_OBJ = perceptron_interface.o perceptron.o
 PERCEPTRON_DEPS = cbp.h perceptron.h
 
+BIMODAL_OBJ = bimodal_interface.o bimodal.o
+BIMODAL_DEPS = cbp.h bimodal.h
+
 DEBUG=0
 ifeq ($(DEBUG), 1)
 	CC += -ggdb3
@@ -63,7 +66,12 @@ ifeq ($(MAKECMDGOALS),perceptron)
     DEPS = $(PERCEPTRON_DEPS)
 endif
 
-.PHONY: clean lib data example always_taken perceptron
+ifeq ($(MAKECMDGOALS),bimodal)
+    OBJ = $(BIMODAL_OBJ)
+    DEPS = $(BIMODAL_DEPS)
+endif
+
+.PHONY: clean lib data example always_taken perceptron bimodal
 
 # Default to building the provided example
 all: example
@@ -93,10 +101,16 @@ perceptron: cbp_perceptron
 cbp_perceptron: $(PERCEPTRON_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
+# Bimodal target
+bimodal: cbp_bimodal
+
+cbp_bimodal: $(BIMODAL_OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
 # Generic rule for building object files
 %.o: %.cc $(DEPS)
 	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron
+	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron cbp_bimodal
 	make -C lib clean
