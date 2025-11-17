@@ -28,6 +28,11 @@ LIBS = -lcbp -lz
 FLAGS = -std=c++17 -L./lib $(LIBS) $(OPT)
 CPPFLAGS = -std=c++17 $(OPT)
 
+# MLP configuration
+# Example override: make mlp MLP_WEIGHTS_FILE=mlp_10_20.txt
+MLP_WEIGHTS_FILE ?= mlp_2_4.txt
+MLP_FLAGS = -DMLP_WEIGHTS_FILE=\"$(MLP_WEIGHTS_FILE)\"
+
 # Default object files and dependencies
 OBJ = cond_branch_predictor_interface.o my_cond_branch_predictor.o
 DEPS = cbp.h cond_branch_predictor_interface.h my_cond_branch_predictor.h
@@ -45,6 +50,9 @@ PERCEPTRON_DEPS = cbp.h perceptron.h
 
 BIMODAL_OBJ = bimodal_interface.o bimodal.o
 BIMODAL_DEPS = cbp.h bimodal.h
+
+MLP_OBJ = mlp_interface.o mlp.o
+MLP_DEPS = cbp.h mlp.h
 
 DEBUG=0
 ifeq ($(DEBUG), 1)
@@ -71,7 +79,12 @@ ifeq ($(MAKECMDGOALS),bimodal)
     DEPS = $(BIMODAL_DEPS)
 endif
 
-.PHONY: clean lib data example always_taken perceptron bimodal
+ifeq ($(MAKECMDGOALS),mlp)
+    OBJ = $(MLP_OBJ)
+    DEPS = $(MLP_DEPS)
+endif
+
+.PHONY: clean lib data example always_taken perceptron bimodal mlp
 
 # Default to building the provided example
 all: example
@@ -107,10 +120,22 @@ bimodal: cbp_bimodal
 cbp_bimodal: $(BIMODAL_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
 
+# MLP target
+mlp: cbp_mlp
+
+cbp_mlp: $(MLP_OBJ) | lib
+	$(CC) $(FLAGS) -o $@ $^
+
+mlp_interface.o: mlp_interface.cc $(MLP_DEPS) # Include MLP_FLAGS
+	$(CC) $(FLAGS) $(MLP_FLAGS) -c -o $@ $<
+
+mlp.o: mlp.cc $(MLP_DEPS) # Include MLP_FLAGS
+	$(CC) $(FLAGS) $(MLP_FLAGS) -c -o $@ $<
+
 # Generic rule for building object files
 %.o: %.cc $(DEPS)
 	$(CC) $(FLAGS) -c -o $@ $<
 
 clean:
-	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron cbp_bimodal
+	rm -f *.o cbp_example cbp_data cbp_always_taken cbp_perceptron cbp_bimodal cbp_mlp
 	make -C lib clean
