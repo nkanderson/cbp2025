@@ -5,6 +5,9 @@
         This script loads in a CSV file, shuffles the data, and extracts a specified
         percentage of the data, taking target indicies of each line. The processed data
         is then saved to a new CSV file.
+        
+        Note: Script uses random to shuffle data, takes first N% of lines, and collapses
+        list into a set to remove repeat lines.
 """
 
 import csv
@@ -19,11 +22,12 @@ target_indicies = [0, 3]
 class ProcessData:
     """Encapsulate CSV processing parameters and operations."""
 
-    def __init__(self, input_file, output_file, percentage, seed):
+    def __init__(self, input_file, output_file, percentage, seed, input_size):
         self.input_file = input_file
         self.output_file = output_file
         self.percentage = percentage
         self.seed = seed
+        self.input_size = input_size
 
     def read_csv(self):
         """Read entire CSV file and return a list of rows. Each row is represented as a list."""
@@ -42,27 +46,36 @@ class ProcessData:
         # Read data from input CSV file
         data = self.read_csv()
         total_lines = len(data)
+        
+        num_lines_to_take = int((self.percentage / 100) * total_lines)
 
         # Shuffle data with specified seed
         shuffled_data = self.shuffle_data(data)
-
-        # Calculate number of lines to process based on percentage
-        num_lines_to_process = int((self.percentage / 100.0) * total_lines)
-
+        
         # Extract target columns from the specified number of lines
         processed_data = []
-
-        try:
-            for i in range(num_lines_to_process):
-                line = shuffled_data[i]
-                if not line:
-                    continue  # Skip empty lines
-                extracted_line = [line[index] for index in target_indicies]
-                processed_data.append(extracted_line)
-        except IndexError as e:
-            print(f"IndexError encountered: {e}. Check if target indices are valid for the data.")
-
+        
+        # Parse for target columns
+        for i in range(num_lines_to_take):
+            row = shuffled_data[i]
+            extracted_row = [row[index] for index in target_indicies]
+            
+            # Mask history value to keep only the lowest `input_size` bits, but keep decimal representation
+            hist_str = extracted_row[1].strip()
+            history_value = int(hist_str, 10)
+            history_mask = (1 << self.input_size) - 1
+            masked = history_value & history_mask
+            extracted_row[1] = str(masked)
+            
+            processed_data.append(extracted_row)
+            
+        # Remove duplicate rows by converting to a set of tuples
         processed_set = set(tuple(row) for row in processed_data)
+        
+        # Remove percentage of set 
+        num_unique_lines = len(processed_set)
+        num_lines_to_take_from_set = int((self.percentage / 100) * num_unique_lines)
+        processed_set = list(processed_set)[:num_lines_to_take_from_set]
 
         # Write processed data to output CSV file
         with open(self.output_file, mode='w', newline='', encoding='utf-8') as csvfile:

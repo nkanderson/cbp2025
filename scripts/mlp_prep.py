@@ -15,18 +15,35 @@ from pathlib import Path
 import subprocess
 import time
 
+# Helper functions for argument parsing
 def rel_path(p):
     p = Path(p)
     return p if p.is_absolute() else (Path.cwd() / p)
+
+def restricted_percent(p):
+    p = float(p)
+    if p < 0.0 or p > 100.0:
+        raise argparse.ArgumentTypeError("Percentage must be between 0 and 100.")
+    return p
+
+def restricted_size(s):
+    s = int(s)
+    if s <= 0:
+        raise argparse.ArgumentTypeError("Input size must be a positive integer.")
+    elif s > 64:
+        raise argparse.ArgumentTypeError("Input size must be less than or equal to 64.")
+    return s
 
 # Set up argument parser
 parser = argparse.ArgumentParser(description="Workflow script for MLP data preparation")
 parser.add_argument("--trace_dir", type=rel_path, help="Path to the input trace directory", required=True)
 parser.add_argument("--output_dir", type=rel_path, help="Path to the output files", required=True)
-parser.add_argument("--percentage", type=float, default=100.0,
+parser.add_argument("--percentage", type=restricted_percent, default=100.0,
                     help="Percentage to take from original log (default: 100.0)")
 parser.add_argument("--seed", type=int, default=42,
                     help="Random seed for shuffling (default: 42)")
+parser.add_argument("--input_size", type=restricted_size, default=64, 
+                    help="Input size for MLP (default: 64)")
 args = parser.parse_args()
 
 
@@ -112,7 +129,8 @@ def main():
         input_file=str(timestamped_csv_path),
         output_file=str(processed_path),
         percentage=args.percentage,
-        seed=args.seed
+        seed=args.seed,
+        input_size=args.input_size
     )
 
     processor.process()
