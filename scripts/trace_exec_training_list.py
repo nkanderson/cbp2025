@@ -237,13 +237,13 @@ def execute_trace(my_trace_path):
 
 if __name__ == '__main__':
     # For parallel runs:
-    #with mp.Pool() as pool:
-    #    results = pool.map(execute_trace, my_traces)
+    with mp.Pool() as pool:
+        results = pool.map(execute_trace, my_traces)
     
     # For serial runs:
-    results = []
-    for my_trace in my_traces:
-        results.append(execute_trace(my_trace))
+    #results = []
+    #for my_trace in my_traces:
+    #    results.append(execute_trace(my_trace))
     
     df = pd.DataFrame(columns=['Workload', 'Run', 'TraceSize', 'ExecTime', 'Instr', 'Cycles', 'IPC', 'NumBr', 'MispBr', 'BrPerCyc', 'MispBrPerCyc', 'MR', 'MPKI', 'CycWP',  'CycWPAvg', 'CycWPPKI', '50PercInstr', '50PercCycles', '50PercIPC', '50PercNumBr', '50PercMispBr', '50PercBrPerCyc', '50PercMispBrPerCyc', '50PercMR', '50PercMPKI', '50PercCycWP', '50PercCycWPAvg', '50PercCycWPPKI'])
     for my_result in results:

@@ -24,6 +24,8 @@
 #include <fstream>
 #include <iostream>
 
+#include <unistd.h>
+
 #define B_TAKEN 1
 #define B_NOT_TAKEN 0
 
@@ -43,8 +45,14 @@ void beginCondDirPredictor()
     cbp2016_tage_sc_l.setup();
     cond_predictor_impl.setup();
 
+    pid_t pid = getpid();
+
+    std::string pid_str = std::to_string(pid);
+
+    std::string fileName = "branch_history_log_p" + pid_str + ".csv";
+
     // Create csv file to store global branch history and resolved branch direction
-    outfile.open("branch_history_log.csv", std::ios::app);
+    outfile.open(fileName, std::ios::app);
     initLineCnt = 64;
 }
 

@@ -22,12 +22,13 @@ target_indicies = [0, 3]
 class ProcessData:
     """Encapsulate CSV processing parameters and operations."""
 
-    def __init__(self, input_file, output_file, percentage, seed, input_size):
+    def __init__(self, input_file, output_file, percentage=100.0, seed=None, input_size=64, dedup=True):
         self.input_file = input_file
         self.output_file = output_file
         self.percentage = percentage
         self.seed = seed
         self.input_size = input_size
+        self.dedup = dedup
 
     def read_csv(self):
         """Read entire CSV file and return a list of rows. Each row is represented as a list."""
@@ -50,7 +51,10 @@ class ProcessData:
         num_lines_to_take = int((self.percentage / 100) * total_lines)
 
         # Shuffle data with specified seed
-        shuffled_data = self.shuffle_data(data)
+        if self.seed is not None:
+            shuffled_data = self.shuffle_data(data)
+        else:
+            shuffled_data = data
         
         # Extract target columns from the specified number of lines
         processed_data = []
@@ -70,7 +74,10 @@ class ProcessData:
             processed_data.append(extracted_row)
             
         # Remove duplicate rows by converting to a set of tuples
-        processed_set = set(tuple(row) for row in processed_data)
+        if self.dedup:
+            processed_set = set(tuple(row) for row in processed_data)
+        else:
+            processed_set = processed_data
         
         # Remove percentage of set 
         num_unique_lines = len(processed_set)
