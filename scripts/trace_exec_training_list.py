@@ -14,12 +14,32 @@ from pathlib import Path
 
 
 parser = argparse.ArgumentParser()
+sim_group = parser.add_mutually_exclusive_group(required=True)
+sim_group.add_argument('--simulator', help='simulator binary name in current working directory')
+sim_group.add_argument('--simulator_path', help='absolute or relative path to the simulator binary')
 parser.add_argument('--trace_dir', help='path to trace directory', required= True)
 parser.add_argument('--results_dir', help='path to results directory', required= True)
+#Added thes to facilitate parameter tags for chart generation
+parser.add_argument('--table_size', help='perceptron table size for chart', required= False)
+parser.add_argument('--hist_len', help='history length for chart', required= False)
+parser.add_argument('--layer_size', help='mlp hidden layer size for chart', required= False)
+
 
 args = parser.parse_args()
+if args.simulator:
+    simulator_cmd = Path(args.simulator)
+    isFile = True
+else:
+    simulator_cmd = Path(args.simulator_path)
+    isFile = False
+    
+    
 trace_dir = Path(args.trace_dir)
 results_dir = Path(args.results_dir)
+# Variables for parameter tags
+TblSize = args.table_size if args.table_size is not None else ""
+HistLen = args.hist_len if args.hist_len is not None else ""
+LayerSize = args.layer_size if args.layer_size is not None else ""
 
 def get_trace_paths(start_path):
     ret_list = []
@@ -192,7 +212,13 @@ def execute_trace(my_trace_path):
 
     do_process = True
     my_run_name = f'{my_wl}/{run_name}'
-    exec_cmd = f'./cbp {my_trace_path}'
+    
+    if isFile:
+        exec_cmd = f'./{simulator_cmd} {my_trace_path}'
+    else:    
+        exec_cmd = f'{simulator_cmd} {my_trace_path}'
+        
+    print(f'Executing CMD:{exec_cmd} for run:{my_run_name}')
     op_file = f'{results_dir}/{my_wl}/{run_name}.log'
     if os.path.exists(op_file):
         #print(f"OP file:{op_file} already exists. Not running again!")
@@ -227,7 +253,7 @@ if __name__ == '__main__':
     #for my_trace in my_traces:
     #    results.append(execute_trace(my_trace))
     
-    df = pd.DataFrame(columns=['Workload', 'Run', 'TraceSize', 'ExecTime', 'Instr', 'Cycles', 'IPC', 'NumBr', 'MispBr', 'BrPerCyc', 'MispBrPerCyc', 'MR', 'MPKI', 'CycWP',  'CycWPAvg', 'CycWPPKI', '50PercInstr', '50PercCycles', '50PercIPC', '50PercNumBr', '50PercMispBr', '50PercBrPerCyc', '50PercMispBrPerCyc', '50PercMR', '50PercMPKI', '50PercCycWP', '50PercCycWPAvg', '50PercCycWPPKI'])
+    df = pd.DataFrame(columns=['Workload', 'Run', 'TraceSize', 'ExecTime', 'Instr', 'Cycles', 'IPC', 'NumBr', 'MispBr', 'BrPerCyc', 'MispBrPerCyc', 'MR', 'MPKI', 'CycWP',  'CycWPAvg', 'CycWPPKI', '50PercInstr', '50PercCycles', '50PercIPC', '50PercNumBr', '50PercMispBr', '50PercBrPerCyc', '50PercMispBrPerCyc', '50PercMR', '50PercMPKI', '50PercCycWP', '50PercCycWPAvg', '50PercCycWPPKI', 'TblSize', 'HistLen', 'LayerSize'])
     for my_result in results:
         pass_status = my_result[0]
         trace_path = my_result[1]
@@ -235,13 +261,19 @@ if __name__ == '__main__':
         my_run_name = my_result[3]
         run_dict = {}
         run_dict = process_run_op(pass_status, trace_path, my_run_name, op_file)
+
+        # They will be empty strings if not provided in command line arguments.
+        run_dict['TblSize'] = TblSize
+        run_dict['HistLen'] = HistLen
+        run_dict['LayerSize'] = LayerSize
+
         my_df = pd.DataFrame([run_dict])
         if not df.empty:
             df = pd.concat([df, my_df], ignore_index=True)
         else:
             df = my_df.copy()
     print(df)
-    df.to_csv(f'{results_dir}/results.csv', index=False)
+    df.to_csv(f'{results_dir}/results_{timestamp}.csv', index=False)
     
     
     unique_wls = df['Workload'].unique()
