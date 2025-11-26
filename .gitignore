@@ -32,3 +32,4 @@ cbp_*
 # Results & data
 sample_results/
 branch_history_log.csv
+viz_traces/
