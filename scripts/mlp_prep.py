@@ -12,6 +12,7 @@ import argparse
 from process_data import ProcessData
 from pathlib import Path
 import subprocess
+from multiprocessing import Pool
 import time
 import re
 import shutil
@@ -147,19 +148,23 @@ def create_paths(file_list, output_dir, timestamp):
         
     return csv_paths, processed_paths
 
+def dedupSingleCSV(args):
+    input_csv, output_csv = args
+    processor = ProcessData(
+        input_file=str(input_csv),
+        output_file=str(output_csv),
+        dedup=True
+    )
+    processor.process()
+    print(f"Processed training data saved to: {output_csv}")
+
 def processCSVList(csv_list, output_list, timestamp):
     # Process each CSV file in the provided list to dedup, 
     # concatenate them output CSVs, and process them again with args
     
-    # Process the CSV file list
-    for index, f in enumerate(csv_list):
-        processor = ProcessData(
-            input_file=str(csv_list[index]),
-            output_file=str(output_list[index]),
-            dedup=True
-        )
-        processor.process()
-        print(f"Processed training data saved to: {output_list[index]}")
+    # Run multiprocessing pool to dedup each CSV in parallel
+    with Pool() as pool:
+        pool.map(dedupSingleCSV, zip(csv_list, output_list))
         
     # Combine all processed CSV files into a single CSV
     combined_output_path = output_dir_path / f"mlp_training_data_{timestamp}.csv"
@@ -180,7 +185,7 @@ def processCSVList(csv_list, output_list, timestamp):
     )
     processor.process()
     
-    print(f"Combined processed training data saved to: {combined_output_path}")
+    print(f"\nCombined processed training data saved to: {combined_output_path}")
     
 
 def main():

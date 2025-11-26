@@ -47,9 +47,6 @@ class ProcessData:
         """Process the CSV according to the configured parameters and write the output CSV."""
         # Read data from input CSV file
         data = self.read_csv()
-        total_lines = len(data)
-        
-        num_lines_to_take = int((self.percentage / 100) * total_lines)
 
         # Shuffle data with specified seed
         if self.seed is not None:
@@ -61,8 +58,7 @@ class ProcessData:
         processed_data = []
         
         # Parse for target columns
-        for i in range(num_lines_to_take):
-            row = shuffled_data[i]
+        for row in shuffled_data:
             if self.isProcessed:
                 # If data is already processed, use the row as is
                 extracted_row = row
