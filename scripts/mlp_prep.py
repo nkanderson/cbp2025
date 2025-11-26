@@ -14,6 +14,7 @@ from pathlib import Path
 import subprocess
 import time
 import re
+import shutil
 
 # Helper functions for argument parsing
 def rel_path(p):
@@ -49,10 +50,6 @@ parser.add_argument("--skip_sim", action="store_true",
                     help="If set, skips the trace execution step and uses CSV in trace_dir")
 args = parser.parse_args()
 
-if args.skip_sim:
-    # If skipping simulation, ensure the provided trace_dir is a valid CSV file, not a directory
-    assert args.trace_dir.is_file(), f"When skipping simulation, trace_dir must be a valid CSV file. Given: {args.trace_dir}"
-
 relative_path = Path.cwd()
 
 # Gather PATH information
@@ -61,22 +58,22 @@ simulator_path = Path(base_path.parent / "cbp_data")
 trace_dir_path = Path(args.trace_dir)
 output_dir_path = Path(args.output_dir)
 
-search_pattern = re.compile(r'^branch_history_log_p[^/]*')
+search_pattern = re.compile(r".*branch_history_log.*")
 
 # Skip simulation, use provided CSV directly
 if args.skip_sim:
     default_csv = trace_dir_path
     print(f"Skip Simulation Mode Enabled."
-        f"\nCSV path: {default_csv}"
-        f"\nOutput directory path: {output_dir_path}")
+        f"\n\tCSV path: {default_csv}"
+        f"\n\tOutput directory path: {output_dir_path}\n")
 # For normal operation, use the default concatenated CSV path
 else:
     default_csv = Path(base_path.parent / "branch_history_log.csv")
     print(f"Normal Simulation Mode Enabled."
-        f"Simulator path: {simulator_path}"
-        f"\nTrace directory path: {trace_dir_path}"
-        f"\nOutput directory path: {output_dir_path}"
-        f"\nDefault concatenated CSV path: {default_csv}")
+        f"\n\tSimulator path: {simulator_path}"
+        f"\n\tTrace directory path: {trace_dir_path}"
+        f"\n\tOutput directory path: {output_dir_path}"
+        f"\n\tDefault concatenated CSV path: {default_csv}\n")
 
 def run_trace_script():
     # Run a subprocess to execute external Python script for trace execution
@@ -117,6 +114,74 @@ def run_trace_script():
     print(result.stdout)
     print(result.stderr)
         
+def create_paths(file_list, output_dir, timestamp):
+    # Creates new paths for CSV files and processed files based on the provided file list
+    
+    csv_paths = []
+    processed_paths = []
+    
+    # Move/rename the CSVs into the renamed folder with timestamp
+    for f in file_list:
+        f = Path(f)  # Convert String to Path
+
+        name, ext = os.path.splitext(f.name)
+    
+        # Extract trace type from filename (words before 'branch_history_log')
+        trace_type = re.search(r'^(.*?)(_branch_history_log)', name)
+        trace_type_str = trace_type.group(1) if trace_type else "unknown"
+        
+        if args.skip_sim:
+            new_csv_path = output_dir / f"{name}_{ext}"
+        else:
+            new_csv_path = output_dir / f"{name}_{timestamp}{ext}"
+         
+        new_processed_path = output_dir / f"{trace_type_str}_dedup_data_{timestamp}{ext}"
+        
+        # Move or copy file (depending on skip_sim)
+        if args.skip_sim:
+            shutil.copy2(f, new_csv_path)
+        else:
+            f.rename(new_csv_path)
+        csv_paths.append(new_csv_path)
+        processed_paths.append(new_processed_path)
+        
+    return csv_paths, processed_paths
+
+def processCSVList(csv_list, output_list, timestamp):
+    # Process each CSV file in the provided list to dedup, 
+    # concatenate them output CSVs, and process them again with args
+    
+    # Process the CSV file list
+    for index, f in enumerate(csv_list):
+        processor = ProcessData(
+            input_file=str(csv_list[index]),
+            output_file=str(output_list[index]),
+            dedup=True
+        )
+        processor.process()
+        print(f"Processed training data saved to: {output_list[index]}")
+        
+    # Combine all processed CSV files into a single CSV
+    combined_output_path = output_dir_path / f"mlp_training_data_{timestamp}.csv"
+    with open(combined_output_path, mode='w', newline='', encoding='utf-8') as combined_file:
+        for processed_file in output_list:
+            with open(processed_file, mode='r', newline='', encoding='utf-8') as pf:
+                combined_file.write(pf.read())
+                
+    # Processed combined file path with processor with parameters, no dedup
+    processor = ProcessData(
+        input_file=str(combined_output_path),
+        output_file=str(combined_output_path),
+        percentage=args.percentage,
+        seed=args.seed,
+        input_size=args.input_size,
+        dedup=False,
+        isProcessed=True
+    )
+    processor.process()
+    
+    print(f"Combined processed training data saved to: {combined_output_path}")
+    
 
 def main():
     """
@@ -134,79 +199,32 @@ def main():
         # Gather all generated CSV files matching the pattern
         file_matches = [p.resolve() for p in base_path.parent.iterdir() if p.is_file() and search_pattern.match(p.name)]
     else:
-        file_matches = [default_csv]
-        # Create output directory if it doesn't exist
+        # Create output directory
         output_path = output_dir_path / "traceresults"
         output_path.mkdir(parents=True, exist_ok=True)
+        # Gather all CSV files in the trace directory
+        file_matches = [p.resolve() for p in trace_dir_path.iterdir() if p.is_file() and search_pattern.match(p.name)]
     
-    # Check that all searched files exist
-    for f in file_matches:
-        print(f"Found generated CSV file: {f}")
-        assert(f.is_file()), f"Expected output CSV {default_csv} does not exist."
-    
+    # Generate timestamp for output files
     timestamp = time.strftime("%Y%m%d_%H%M%S")
 
-    # Rename the current output directory (do not create a new one)
+    # Rename the current output directory to timestamp it
     current_output_dir = output_dir_path / "traceresults"
     assert current_output_dir.exists() and current_output_dir.is_dir(), f"Expected output directory {current_output_dir} does not exist."
-
     renamed_output_dir = output_dir_path / f"traceresults_{timestamp}"
     current_output_dir.rename(renamed_output_dir)
-    print(f"Renamed output directory to: {renamed_output_dir}")
+    print(f"Renamed output directory to: {renamed_output_dir}\n")
     
-    renamed_csv_paths = []
-    renamed_processed_paths = []
-    
-    # Move/rename the CSVs into the renamed folder with timestamp
-    for index, f in enumerate(file_matches):
-        f = Path(f)  # convert string → Path
-
-        name, ext = os.path.splitext(f.name)
-        new_csv_path = renamed_output_dir / f"{name}_{timestamp}{ext}"
-        
-        # Extract PID number from filename
-        pid = re.search(r'p(\d+)', name)
-        pid_str = pid.group(1) if pid else "unknown"
-        new_processed_path = renamed_output_dir / f"training_data_p{pid_str}_{timestamp}{ext}"
-
-        f.rename(new_csv_path)
-        renamed_csv_paths.append(new_csv_path)
-        renamed_processed_paths.append(new_processed_path)
+    # Create renamed paths for CSVs and processed files
+    renamed_csv_paths, renamed_processed_paths = create_paths(file_matches, renamed_output_dir, timestamp)
 
     # Print renamed paths    
-    for index, f in enumerate(renamed_processed_paths):
-        print(f"Input CSV [{[index]}]: {renamed_csv_paths[index]}")
-        print(f"Output CSV [{[index]}]: {f}")
+    for index, _ in enumerate(renamed_csv_paths):
+        print(f"Input CSV\t{[index]}: {renamed_csv_paths[index]}")
+        print(f"Output CSV\t{[index]}: {renamed_processed_paths[index]}\n")
         
-    # Process the generated CSV file
-    for index, f in enumerate(renamed_csv_paths):
-        processor = ProcessData(
-            input_file=str(renamed_csv_paths[index]),
-            output_file=str(renamed_processed_paths[index]),
-            dedup=True
-        )
-
-        processor.process()
-
-        print(f"Processed training data saved to: {renamed_processed_paths[index]}")
-        
-    # Combine all processed CSV files into a single CSV
-    combined_output_path = output_dir_path / f"mlp_training_data_{timestamp}.csv"
-    with open(combined_output_path, mode='w', newline='', encoding='utf-8') as combined_file:
-        for processed_file in renamed_processed_paths:
-            with open(processed_file, mode='r', newline='', encoding='utf-8') as pf:
-                combined_file.write(pf.read())
-                
-    # Processed combined file path with processor with parameters, no dedup
-    print(f"Combined processed training data saved to: {combined_output_path}")
-    processor = ProcessData(
-        input_file=str(combined_output_path),
-        output_file=str(combined_output_path),
-        percentage=args.percentage,
-        seed=args.seed,
-        input_size=args.input_size,
-        dedup=False
-    )
+    # Process each CSV file on list
+    processCSVList(renamed_csv_paths, renamed_processed_paths, timestamp)
 
 if __name__=="__main__":
     main()

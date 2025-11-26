@@ -22,13 +22,14 @@ target_indicies = [0, 3]
 class ProcessData:
     """Encapsulate CSV processing parameters and operations."""
 
-    def __init__(self, input_file, output_file, percentage=100.0, seed=None, input_size=64, dedup=True):
+    def __init__(self, input_file, output_file, percentage=100.0, seed=None, input_size=64, dedup=True, isProcessed=False):
         self.input_file = input_file
         self.output_file = output_file
         self.percentage = percentage
         self.seed = seed
         self.input_size = input_size
         self.dedup = dedup
+        self.isProcessed = isProcessed
 
     def read_csv(self):
         """Read entire CSV file and return a list of rows. Each row is represented as a list."""
@@ -62,7 +63,11 @@ class ProcessData:
         # Parse for target columns
         for i in range(num_lines_to_take):
             row = shuffled_data[i]
-            extracted_row = [row[index] for index in target_indicies]
+            if self.isProcessed:
+                # If data is already processed, use the row as is
+                extracted_row = row
+            else:
+                extracted_row = [row[index] for index in target_indicies]
             
             # Mask history value to keep only the lowest `input_size` bits, but keep decimal representation
             hist_str = extracted_row[1].strip()
