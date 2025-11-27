@@ -19,6 +19,8 @@
 #include "lib/sim_common_structs.h"
 #include "cbp2016_tage_sc_l.h"
 #include "my_cond_branch_predictor.h"
+#include "lib/config.h"
+#include <regex>
 #include <cassert>
 
 #include <fstream>
@@ -43,8 +45,23 @@ void beginCondDirPredictor()
     cbp2016_tage_sc_l.setup();
     cond_predictor_impl.setup();
 
+    std::string trace_tag;
+
+    if (g_traceName.empty()) {
+        std::cerr << "Trace Name is missing, placing empty tag for trace." << std::endl;
+        trace_tag = "";
+    } else {
+        std::regex pattern(R"(.*/([^/]+)_trace[.]gz$)");
+        std::smatch m;
+        std::regex_search(g_traceName, m, pattern);
+        trace_tag = std::string(m[1]);
+        std::cout << "Tag of Trace: " << trace_tag << std::endl;
+    }
+
+    std::string fileName = trace_tag + "_branch_history_log" + ".csv";
+
     // Create csv file to store global branch history and resolved branch direction
-    outfile.open("branch_history_log.csv", std::ios::app);
+    outfile.open(fileName, std::ios::app);
     initLineCnt = 64;
 }
 

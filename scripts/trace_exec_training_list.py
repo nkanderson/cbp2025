@@ -14,10 +14,22 @@ from pathlib import Path
 
 
 parser = argparse.ArgumentParser()
+sim_group = parser.add_mutually_exclusive_group(required=True)
+sim_group.add_argument('--simulator', help='simulator binary name in current working directory')
+sim_group.add_argument('--simulator_path', help='absolute or relative path to the simulator binary')
 parser.add_argument('--trace_dir', help='path to trace directory', required= True)
 parser.add_argument('--results_dir', help='path to results directory', required= True)
 
+
 args = parser.parse_args()
+if args.simulator:
+    simulator_cmd = Path(args.simulator)
+    isFile = True
+else:
+    simulator_cmd = Path(args.simulator_path)
+    isFile = False
+    
+    
 trace_dir = Path(args.trace_dir)
 results_dir = Path(args.results_dir)
 
@@ -192,7 +204,13 @@ def execute_trace(my_trace_path):
 
     do_process = True
     my_run_name = f'{my_wl}/{run_name}'
-    exec_cmd = f'./cbp {my_trace_path}'
+    
+    if isFile:
+        exec_cmd = f'./{simulator_cmd} {my_trace_path}'
+    else:    
+        exec_cmd = f'{simulator_cmd} {my_trace_path}'
+        
+    print(f'Executing CMD:{exec_cmd} for run:{my_run_name}')
     op_file = f'{results_dir}/{my_wl}/{run_name}.log'
     if os.path.exists(op_file):
         #print(f"OP file:{op_file} already exists. Not running again!")

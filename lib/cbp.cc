@@ -35,6 +35,9 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "resource_schedule.h"
 #include "uarchsim.h"
 #include "parameters.h"
+#include "config.h"
+
+std::string g_traceName;
 
 uarchsim_t *sim;
 
@@ -278,6 +281,8 @@ int main(int argc, char ** argv)
 {
   int i = parseargs(argc, argv);
   TraceReader reader(argv[i]);
+
+  g_traceName = std::string(argv[1]);
 
   // Need to create simulator after parsing arguments (for global parameters).
   sim = new uarchsim_t;
