@@ -115,13 +115,13 @@ void PerceptronPredictor::update(uint64_t seq_no, uint8_t piece, uint64_t PC,
     // Update bias (index 0)
     // Increment if taken, decrement if not taken
     if (resolveDir) {
-      // Branch was taken: increment bias (saturate at INT16_MAX)
-      if (perceptron.weights[0] < INT16_MAX) {
+      // Branch was taken: increment bias (saturate at THETA)
+      if (perceptron.weights[0] < THETA) {
         perceptron.weights[0]++;
       }
     } else {
-      // Branch was not taken: decrement bias (saturate at INT16_MIN)
-      if (perceptron.weights[0] > INT16_MIN) {
+      // Branch was not taken: decrement bias (saturate at -THETA)
+      if (perceptron.weights[0] > -THETA) {
         perceptron.weights[0]--;
       }
     }
