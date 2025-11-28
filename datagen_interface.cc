@@ -130,7 +130,7 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
         // Log current history with resolved direction (GHR, Resolve Direction, Predicted Direction)
         if (initLineCnt == 0) {
             outfile << (resolve_dir ? B_TAKEN : B_NOT_TAKEN) << "," << pred_dir << "," << 
-            (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << "\n";
+            (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << std::endl;
         } else {
             initLineCnt -= 1;
         }
