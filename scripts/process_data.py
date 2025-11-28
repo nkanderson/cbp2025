@@ -11,13 +11,12 @@
 """
 
 import csv
-import argparse
 import random
-
+import pandas as pd
+import numpy as np
 
 # Indices to target in each line of the CSV (resolved direction and history register)
 target_indicies = [0, 3]
-
 
 class ProcessData:
     """Encapsulate CSV processing parameters and operations."""
@@ -31,61 +30,29 @@ class ProcessData:
         self.dedup = dedup
         self.isProcessed = isProcessed
 
-    def read_csv(self):
-        """Read entire CSV file and return a list of rows. Each row is represented as a list."""
-        with open(self.input_file, mode='r', newline='', encoding='utf-8') as csvfile:
-            reader = csv.reader(csvfile)
-            return list(reader)
-
-    def shuffle_data(self, data):
-        """Shuffle the input list using the instance's random seed."""
-        random.seed(self.seed)
-        random.shuffle(data)
-        return data
-
     def process(self):
         """Process the CSV according to the configured parameters and write the output CSV."""
-        # Read data from input CSV file
-        data = self.read_csv()
-
-        # Shuffle data with specified seed
+        # Read CSV with pandas
+        df = pd.read_csv(self.input_file, header=None)
+        
+        # Shuffle if seed is provided
         if self.seed is not None:
-            shuffled_data = self.shuffle_data(data)
-        else:
-            shuffled_data = data
+            df = df.sample(frac=1, random_state=self.seed).reset_index(drop=True)
         
-        # Extract target columns from the specified number of lines
-        processed_data = []
+        # Extract target columns and apply mask if not already processed
+        if not self.isProcessed:
+            df = df.iloc[:, target_indicies]
+            history_mask = np.uint64((1 << self.input_size) - 1)
+            df.iloc[:, 1] = df.iloc[:, 1].astype('uint64') & history_mask
         
-        # Parse for target columns
-        for row in shuffled_data:
-            if self.isProcessed:
-                # If data is already processed, use the row as is
-                extracted_row = row
-            else:
-                extracted_row = [row[index] for index in target_indicies]
-            
-            # Mask history value to keep only the lowest `input_size` bits, but keep decimal representation
-            hist_str = extracted_row[1].strip()
-            history_value = int(hist_str, 10)
-            history_mask = (1 << self.input_size) - 1
-            masked = history_value & history_mask
-            extracted_row[1] = str(masked)
-            
-            processed_data.append(extracted_row)
-            
-        # Remove duplicate rows by converting to a set of tuples
+        # Remove duplicates
         if self.dedup:
-            processed_set = set(tuple(row) for row in processed_data)
-        else:
-            processed_set = processed_data
+            df = df.drop_duplicates()
         
-        # Remove percentage of set 
-        num_unique_lines = len(processed_set)
-        num_lines_to_take_from_set = int((self.percentage / 100) * num_unique_lines)
-        processed_set = list(processed_set)[:num_lines_to_take_from_set]
-
-        # Write processed data to output CSV file
-        with open(self.output_file, mode='w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerows(processed_set)
+        # Take percentage of data
+        if self.percentage < 100.0:
+            n_rows = int(len(df) * self.percentage / 100)
+            df = df.iloc[:n_rows]
+        
+        # Write output
+        df.to_csv(self.output_file, index=False, header=False)

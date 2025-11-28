@@ -148,12 +148,17 @@ def create_paths(file_list, output_dir, timestamp):
         
     return csv_paths, processed_paths
 
-def dedupSingleCSV(args):
-    input_csv, output_csv = args
+def dedupSingleCSV(lists):
+    input_csv, output_csv = lists
+    
+    # Process a single CSV file to dedup and parse for target columns
+    # If possible, reduce size via input_size parameter before final stage
     processor = ProcessData(
         input_file=str(input_csv),
         output_file=str(output_csv),
-        dedup=True
+        input_size=args.input_size,
+        dedup=True,
+        isProcessed=False
     )
     processor.process()
     print(f"Processed training data saved to: {output_csv}")
@@ -168,18 +173,19 @@ def processCSVList(csv_list, output_list, timestamp):
         
     # Combine all processed CSV files into a single CSV
     combined_output_path = output_dir_path / f"mlp_training_data_{timestamp}.csv"
-    with open(combined_output_path, mode='w', newline='', encoding='utf-8') as combined_file:
+    with open(combined_output_path, mode='wb') as combined_file:
         for processed_file in output_list:
-            with open(processed_file, mode='r', newline='', encoding='utf-8') as pf:
-                combined_file.write(pf.read())
+            with open(processed_file, mode='rb') as pf:
+                # Copy in chunks instead of reading entire file
+                shutil.copyfileobj(pf, combined_file, length=1024*1024)  # 1MB chunks
                 
     # Processed combined file path with processor with parameters, no dedup
+    # Skips parsing for target columns since already done
     processor = ProcessData(
         input_file=str(combined_output_path),
         output_file=str(combined_output_path),
         percentage=args.percentage,
         seed=args.seed,
-        input_size=args.input_size,
         dedup=False,
         isProcessed=True
     )
