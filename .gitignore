@@ -32,3 +32,6 @@ cbp_*
 # Results & data
 sample_results/
 branch_history_log.csv
+
+!perceptron_data/**/*.log
+perceptron_data/traces
