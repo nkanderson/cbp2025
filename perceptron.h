@@ -16,8 +16,16 @@
 // See Jiménez and Lin paper section 4 for design space considerations.
 // The specific factors they focus on are history length, representation of
 // weights, and the threshold value for training.
-static constexpr size_t PERCEPTRON_TABLE_SIZE = 1024;
-static constexpr size_t HISTORY_LENGTH = 62;
+// These can be overridden at compile time via Makefile flags.
+#ifndef PERCEPTRON_TABLE_SIZE
+#define PERCEPTRON_TABLE_SIZE 1024
+#endif
+
+#ifndef PERCEPTRON_HISTORY_LENGTH
+#define PERCEPTRON_HISTORY_LENGTH 62
+#endif
+
+static constexpr size_t HISTORY_LENGTH = PERCEPTRON_HISTORY_LENGTH;
 static constexpr size_t WEIGHTS_PER_PERCEPTRON =
     HISTORY_LENGTH + 1; // +1 for bias at index 0
 
