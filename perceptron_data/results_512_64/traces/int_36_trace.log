@@ -1,4 +1,4 @@
-CMD:./cbp_perceptron /Users/nik/C/cbp2025/perceptron_data/traces/int_36_trace.gz
+CMD:/Users/nik/C/cbp2025/cbp_perceptron /Users/nik/C/cbp2025/perceptron_data/traces/int_36_trace.gz
 5000000 instrs 
 10000000 instrs 
 15000000 instrs 
@@ -121,4 +121,4 @@ Not control        51623171          0   0.0000%   0.0000
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Read 53761949 instrs 
 
-ExecTime = 577.1878769397736
+ExecTime = 574.0674550533295

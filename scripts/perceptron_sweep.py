@@ -69,11 +69,8 @@ def run_traces(table_size, history_length):
     cmd = [
         sys.executable,  # Use same Python interpreter
         str(TRACE_EXEC_SCRIPT),
-        # TODO: Uncomment the following once we've merged in changes
-        # with this option. Right now, testing is being done with a
-        # hardcoded exec_cmd in trace_exec_training_list.py
-        # "--simulator_path",
-        # str(SIMULATOR_PATH),
+        "--simulator_path",
+        str(SIMULATOR_PATH),
         "--trace_dir",
         str(TRACE_DIR),
         "--results_dir",
@@ -93,7 +90,7 @@ def run_traces(table_size, history_length):
 
 def main():
     """Main sweep loop."""
-    print(f"Perceptron Parameter Sweep")
+    print("Perceptron Parameter Sweep")
     print(f"Project root: {PROJECT_ROOT}")
     print(f"Simulator: {SIMULATOR_PATH}")
     print(f"Trace directory: {TRACE_DIR}")

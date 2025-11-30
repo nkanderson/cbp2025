@@ -1,4 +1,4 @@
-CMD:./cbp_perceptron /Users/nik/C/cbp2025/perceptron_data/traces/media_3_trace.gz
+CMD:/Users/nik/C/cbp2025/cbp_perceptron /Users/nik/C/cbp2025/perceptron_data/traces/media_3_trace.gz
 5000000 instrs 
 10000000 instrs 
 15000000 instrs 
@@ -34,8 +34,8 @@ L3$: 32 MB, 16-way set-assoc., 128B block size, 50-cycle search latency
 Main Memory: 150-cycle fixed search time
 ---------------------------STORE QUEUE MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)---------------------------
 Number of loads: 5528910
-Number of loads that miss in SQ: 4367406 (78.99%)
-Number of PFs issued to the memory system 615332
+Number of loads that miss in SQ: 4371078 (79.06%)
+Number of PFs issued to the memory system 615553
 ---------------------------------------------------------------------------------------------------------------------------------------
 ------------------------MEMORY HIERARCHY MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)-------------------------
 I$:
@@ -47,18 +47,18 @@ I$:
 	pf miss ratio = nan%
 L1$:
 	accesses   = 7816636
-	misses     = 9982
+	misses     = 9983
 	miss ratio = 0.13%
-	pf accesses   = 615332
-	pf misses     = 1524
+	pf accesses   = 615553
+	pf misses     = 1525
 	pf miss ratio = 0.25%
 L2$:
-	accesses   = 14108
+	accesses   = 14109
 	misses     = 5673
 	miss ratio = 40.21%
-	pf accesses   = 1524
+	pf accesses   = 1525
 	pf misses     = 809
-	pf miss ratio = 53.08%
+	pf miss ratio = 53.05%
 L3$:
 	accesses   = 5673
 	misses     = 3242
@@ -69,25 +69,25 @@ L3$:
 ---------------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------Prefetcher (Full Simulation i.e. No Warmup)----------------------------------------------
 Num Trainings :5528910
-Num Prefetches generated :654645
-Num Prefetches issued :2919396
-Num Prefetches filtered by PF queue :236455
-Num untimely prefetches dropped from PF queue :39313
-Num prefetches not issued LDST contention :2304064
+Num Prefetches generated :654360
+Num Prefetches issued :2911601
+Num Prefetches filtered by PF queue :236740
+Num untimely prefetches dropped from PF queue :38807
+Num prefetches not issued LDST contention :2296048
 Num prefetches not issued stride 0 :1370082
 ---------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------ILP LIMIT STUDY (Full Simulation i.e. Counts Not Reset When Warmup Ends)--------------------------------
 instructions = 20000046
-cycles       = 5199009
-CycWP        = 2560345
-IPC          = 3.8469
+cycles       = 5242626
+CycWP        = 2607940
+IPC          = 3.8149
 
 ---------------------------------------------------------------------------------------------------------------------------------------
 
 -----------------------------------------------BRANCH PREDICTION MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)----------------------------------------------
 Type                   NumBr     MispBr        mr     mpki
-CondDirect          1130407     142783  12.6311%   7.1391
+CondDirect          1130407     145854  12.9028%   7.2927
 JumpDirect           262037          0   0.0000%   0.0000
 JumpIndirect         101821          0   0.0000%   0.0000
 JumpReturn           221710          0   0.0000%   0.0000
@@ -96,23 +96,23 @@ Not control        23917410          0   0.0000%   0.0000
 
 ------------------------------------------------------DIRECT CONDITIONAL BRANCH PREDICTION MEASUREMENTS (Last 10M instructions)-----------------------------------------------------
        Instr       Cycles      IPC      NumBr     MispBr BrPerCyc MispBrPerCyc        MR     MPKI      CycWP   CycWPAvg   CycWPPKI
-    10000046      2444452   4.0909     568763      70526   0.2327       0.0289  12.3999%   7.0526    1259873    17.8640   125.9867
+    10000046      2466956   4.0536     568763      72198   0.2306       0.0293  12.6939%   7.2198    1284779    17.7952   128.4773
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ------------------------------------------------------DIRECT CONDITIONAL BRANCH PREDICTION MEASUREMENTS (Last 25M instructions)-----------------------------------------------------
        Instr       Cycles      IPC      NumBr     MispBr BrPerCyc MispBrPerCyc        MR     MPKI      CycWP   CycWPAvg   CycWPPKI
-    20000046      5199009   3.8469    1130407     142783   0.2174       0.0275  12.6311%   7.1391    2560345    17.9317   128.0170
+    20000046      5242626   3.8149    1130407     145854   0.2156       0.0278  12.9028%   7.2927    2607940    17.8805   130.3967
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------DIRECT CONDITIONAL BRANCH PREDICTION MEASUREMENTS (50 Perc instructions)---------------------------------------------------
        Instr       Cycles      IPC      NumBr     MispBr BrPerCyc MispBrPerCyc        MR     MPKI      CycWP   CycWPAvg   CycWPPKI
-    10000046      2444452   4.0909     568763      70526   0.2327       0.0289  12.3999%   7.0526    1259873    17.8640   125.9867
+    10000046      2466956   4.0536     568763      72198   0.2306       0.0293  12.6939%   7.2198    1284779    17.7952   128.4773
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------------------------------DIRECT CONDITIONAL BRANCH PREDICTION MEASUREMENTS (Full Simulation i.e. Counts Not Reset When Warmup Ends)-------------------------------------
        Instr       Cycles      IPC      NumBr     MispBr BrPerCyc MispBrPerCyc        MR     MPKI      CycWP   CycWPAvg   CycWPPKI
-    20000046      5199009   3.8469    1130407     142783   0.2174       0.0275  12.6311%   7.1391    2560345    17.9317   128.0170
+    20000046      5242626   3.8149    1130407     145854   0.2156       0.0278  12.9028%   7.2927    2607940    17.8805   130.3967
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Read 20000046 instrs 
 
-ExecTime = 268.350683927536
+ExecTime = 262.83919382095337
