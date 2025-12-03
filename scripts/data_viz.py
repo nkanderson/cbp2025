@@ -7,50 +7,80 @@ from datetime import datetime
 import matplotlib.patches as mpatches
 import numpy as np
 import sys
+import re 
 
 def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_category_col, subtitle=None):
     """
-    Reads all CSV files from a directory, combines the data, and generates bar charts.
+    Recursively searches a directory for CSV files, combines the data, extracts
+    TblSize and HistLen from subdirectory names if missing, and generates bar charts.
     
     Args:
-        directory_path (str): The path to the directory containing the input CSV files.
+        directory_path (str): The base path to the directory containing the input CSV files.
         group_by_col (str or None): The technical column name used for secondary grouping.
         group_by_display_name (str or None): The user-friendly label for the grouping column.
         main_category_col (str): The primary column for categorization (e.g., 'Workload' or 'Run').
         subtitle (str, optional): A string to be used as a subtitle for the charts.
     """
     
-    # Setup Output Directory 
+    # Setup Output Directory
     output_dir = os.path.join(directory_path, 'charts')
     try:
-        # Create the directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
     except Exception as e:
         print(f"Error: Could not create output directory '{output_dir}'. {e}")
         sys.exit(1)
 
-    # Load and Combine Data 
-    all_files = glob.glob(os.path.join(directory_path, "*.csv"))
-    
-    if not all_files:
-        print(f"Error: No CSV files found in the directory: {directory_path}")
-        sys.exit(1)
-        
-    print(f"Found {len(all_files)} CSV file(s). Combining data...")
-    
+    # Load and Combine Data (MODIFIED FOR RECURSION)
     all_dfs = []
-    for file_path in all_files:
-        try:
-            df = pd.read_csv(file_path)
-            all_dfs.append(df)
-        except Exception as e:
-            print(f"Warning: Could not read {file_path}. Skipping. Error: {e}")
+    
+    # Use os.walk to recursively search all subdirectories
+    print(f"Recursively searching for CSV files in: {directory_path}")
+    for root, dirs, files in os.walk(directory_path):
+        # Skip the output directory
+        if root == output_dir:
+            continue
+            
+        # Regex to capture two consecutive numbers in the subdirectory name (e.g., results_64_10)
+        # Finds the first number (TblSize) and the second number (HistLen) separated by an underscore
+        match = re.search(r'(\d+)_(\d+)', os.path.basename(root))
+        
+        # Default values for TblSize and HistLen extracted from directory name
+        dir_tblsize = int(match.group(1)) if match and len(match.groups()) >= 1 else None
+        dir_histlen = int(match.group(2)) if match and len(match.groups()) >= 2 else None
+
+        # Direct iteration over files and case-insensitive check
+        for file_name in files:
+            if file_name.lower().endswith(".csv"):
+                file_path = os.path.join(root, file_name)
+                
+                try:
+                    df = pd.read_csv(file_path)
+                                        
+                    # Check for TblSize
+                    if 'TblSize' not in df.columns:
+                        if dir_tblsize is not None:
+                            df['TblSize'] = dir_tblsize
+                        else:
+                            df['TblSize'] = 'N/A' 
+                    
+                    # Check for HistLen
+                    if 'HistLen' not in df.columns:
+                        if dir_histlen is not None:
+                            df['HistLen'] = dir_histlen
+                        else:
+                            df['HistLen'] = 'N/A' 
+
+                    all_dfs.append(df)
+                    
+                except Exception as e:
+                    print(f"Warning: Could not read {file_path}. Skipping. Error: {e}")
 
     if not all_dfs:
-        print("Error: No valid data could be loaded from the found CSV files.")
+        print(f"Error: No valid CSV files were found in or under the directory: {directory_path}")
         sys.exit(1)
         
     df = pd.concat(all_dfs, ignore_index=True)
+    print(f"Combined data from {len(all_dfs)} file(s).")
     
     # Check for required columns
     required_cols = [main_category_col, 'IPC', 'MPKI', 'MR']
@@ -63,12 +93,14 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
         sys.exit(1)
 
     try:
-        # Clean and aggregate data
+        # Data Cleanup and Aggregation
         df['MR_Clean'] = df['MR'].astype(str).str.replace('%', '', regex=False).astype(float) / 100.0
         
         # Conditional Aggregation
         if group_by_col:
             # Two-Level Grouping
+            df[group_by_col] = df[group_by_col].astype(str)
+            
             grouped_data_unstacked = df.groupby([group_by_col, main_category_col])[['IPC', 'MPKI', 'MR_Clean']].mean().unstack(fill_value=0)
             
             if len(grouped_data_unstacked.index) == 0:
@@ -104,7 +136,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
             fig, ax = plt.subplots(figsize=(12, 7)) 
             
             if group_by_col:
-                # Grouped bars
+                # Plotting: Grouped Bars 
                 num_factors = len(x_labels)
                 bar_width = 0.8 / num_categories
                 x_base = np.arange(num_factors)
@@ -129,7 +161,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 ax.set_xlabel(group_by_display_name, fontsize=12) 
 
             else:
-                # Single-level bars
+                # Plotting: Single-Level Bars
                 values = grouped_data_flat[metric_key].values * props['scale']
                 
                 rects = ax.bar(main_categories, values, color=bar_colors)
@@ -147,7 +179,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 ax.set_xticklabels(x_labels, rotation=0, ha='center') 
                 ax.set_xlabel(main_category_col, fontsize=12)
             
-            # Final Plot Styling (common to both)
+            # inal Plot Styling (common to both)
             main_title = f'{props["label"]} Comparison {plot_title_suffix}'
             
             if subtitle:
@@ -190,7 +222,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
 # Execution
 if __name__ == "__main__":
     
-    # Mapping for column names to display labels
+    # Mapping for technical column names to display labels
     DISPLAY_NAME_MAPPING = {
         'TblSize': 'Table Size',
         'HistLen': 'History Length',
@@ -217,7 +249,7 @@ if __name__ == "__main__":
     
     parser.add_argument('--run', action='store_true', help='Use the "Run" column instead of "Workload" as the primary category (legend and single-level X-axis).')
     
-    # Mutually exclusive group for grouping column
+    # Mutually Exclusive Group (Optional) for Grouping Column
     group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument('--hist', action='store_true', help='Group bars by the "HistLen" column.')
     group.add_argument('--table', action='store_true', help='Group bars by the "TblSize" column.')
