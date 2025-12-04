@@ -33,6 +33,12 @@ CPPFLAGS = -std=c++17 $(OPT)
 MLP_WEIGHTS_FILE ?= mlp_2_4.txt
 MLP_FLAGS = -DMLP_WEIGHTS_FILE=\"$(MLP_WEIGHTS_FILE)\"
 
+# Perceptron configuration
+# Example override: make perceptron PERCEPTRON_TABLE_SIZE=128 PERCEPTRON_HISTORY_LENGTH=1
+PERCEPTRON_TABLE_SIZE ?= 1024
+PERCEPTRON_HISTORY_LENGTH ?= 62
+PERCEPTRON_FLAGS = -DPERCEPTRON_TABLE_SIZE=$(PERCEPTRON_TABLE_SIZE) -DPERCEPTRON_HISTORY_LENGTH=$(PERCEPTRON_HISTORY_LENGTH)
+
 # Default object files and dependencies
 OBJ = cond_branch_predictor_interface.o my_cond_branch_predictor.o
 DEPS = cbp.h cond_branch_predictor_interface.h my_cond_branch_predictor.h
@@ -113,6 +119,12 @@ perceptron: cbp_perceptron
 
 cbp_perceptron: $(PERCEPTRON_OBJ) | lib
 	$(CC) $(FLAGS) -o $@ $^
+
+perceptron_interface.o: perceptron_interface.cc $(PERCEPTRON_DEPS)  # Include PERCEPTRON_FLAGS
+	$(CC) $(FLAGS) $(PERCEPTRON_FLAGS) -c -o $@ $<
+
+perceptron.o: perceptron.cc $(PERCEPTRON_DEPS)  # Include PERCEPTRON_FLAGS
+	$(CC) $(FLAGS) $(PERCEPTRON_FLAGS) -c -o $@ $<
 
 # Bimodal target
 bimodal: cbp_bimodal

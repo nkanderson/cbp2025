@@ -25,6 +25,7 @@ parser.add_argument('--hist_len', help='history length for chart', required= Fal
 parser.add_argument('--layer_size', help='mlp hidden layer size for chart', required= False)
 
 
+
 args = parser.parse_args()
 if args.simulator:
     simulator_cmd = Path(args.simulator)

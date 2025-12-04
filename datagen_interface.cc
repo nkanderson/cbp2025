@@ -19,6 +19,8 @@
 #include "lib/sim_common_structs.h"
 #include "cbp2016_tage_sc_l.h"
 #include "my_cond_branch_predictor.h"
+#include "lib/config.h"
+#include <regex>
 #include <cassert>
 
 #include <fstream>
@@ -43,8 +45,23 @@ void beginCondDirPredictor()
     cbp2016_tage_sc_l.setup();
     cond_predictor_impl.setup();
 
+    std::string trace_tag;
+
+    if (g_traceName.empty()) {
+        std::cerr << "Trace Name is missing, placing empty tag for trace." << std::endl;
+        trace_tag = "";
+    } else {
+        std::regex pattern(R"(.*/([^/]+)_trace[.]gz$)");
+        std::smatch m;
+        std::regex_search(g_traceName, m, pattern);
+        trace_tag = std::string(m[1]);
+        std::cout << "Tag of Trace: " << trace_tag << std::endl;
+    }
+
+    std::string fileName = trace_tag + "_branch_history_log" + ".csv";
+
     // Create csv file to store global branch history and resolved branch direction
-    outfile.open("branch_history_log.csv", std::ios::app);
+    outfile.open(fileName, std::ios::app);
     initLineCnt = 64;
 }
 
@@ -113,7 +130,7 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
         // Log current history with resolved direction (GHR, Resolve Direction, Predicted Direction)
         if (initLineCnt == 0) {
             outfile << (resolve_dir ? B_TAKEN : B_NOT_TAKEN) << "," << pred_dir << "," << 
-            (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << "\n";
+            (resolve_dir == pred_dir ? "HITT" : "MISS") << "," << cond_predictor_impl.get_ghist() << std::endl;
         } else {
             initLineCnt -= 1;
         }
