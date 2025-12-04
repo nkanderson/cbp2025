@@ -13,6 +13,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
     """
     Recursively searches a directory for CSV files, combines the data, extracts
     TblSize and HistLen from subdirectory names if missing, and generates bar charts.
+    The order of bar groups is based on the value of the grouping parameter, sorted ascending numerically.
     
     Args:
         directory_path (str): The base path to the directory containing the input CSV files.
@@ -22,6 +23,15 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
         subtitle (str, optional): A string to be used as a subtitle for the charts.
     """
     
+    # numerical sorting
+    def try_numeric(x):
+        """Attempts to convert a string to a float; returns float('inf') if conversion fails."""
+        try:
+            return float(x)
+        except ValueError:
+            # Assign infinity to non-numeric strings ('N/A') so they sort to the end
+            return float('inf')
+    
     # Setup Output Directory
     output_dir = os.path.join(directory_path, 'charts')
     try:
@@ -30,21 +40,18 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
         print(f"Error: Could not create output directory '{output_dir}'. {e}")
         sys.exit(1)
 
-    # Load and Combine Data (MODIFIED FOR RECURSION)
+    # Load and Combine Data (RECURSIVE SEARCH)
     all_dfs = []
     
-    # Use os.walk to recursively search all subdirectories
     print(f"Recursively searching for CSV files in: {directory_path}")
     for root, dirs, files in os.walk(directory_path):
         # Skip the output directory
         if root == output_dir:
             continue
             
-        # Regex to capture two consecutive numbers in the subdirectory name (e.g., results_64_10)
-        # Finds the first number (TblSize) and the second number (HistLen) separated by an underscore
+        # Regex to capture two consecutive numbers in the subdirectory name (TblSize and HistLen)
         match = re.search(r'(\d+)_(\d+)', os.path.basename(root))
         
-        # Default values for TblSize and HistLen extracted from directory name
         dir_tblsize = int(match.group(1)) if match and len(match.groups()) >= 1 else None
         dir_histlen = int(match.group(2)) if match and len(match.groups()) >= 2 else None
 
@@ -56,19 +63,11 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 try:
                     df = pd.read_csv(file_path)
                                         
-                    # Check for TblSize
                     if 'TblSize' not in df.columns:
-                        if dir_tblsize is not None:
-                            df['TblSize'] = dir_tblsize
-                        else:
-                            df['TblSize'] = 'N/A' 
+                        df['TblSize'] = dir_tblsize if dir_tblsize is not None else 'N/A' 
                     
-                    # Check for HistLen
                     if 'HistLen' not in df.columns:
-                        if dir_histlen is not None:
-                            df['HistLen'] = dir_histlen
-                        else:
-                            df['HistLen'] = 'N/A' 
+                        df['HistLen'] = dir_histlen if dir_histlen is not None else 'N/A' 
 
                     all_dfs.append(df)
                     
@@ -96,9 +95,10 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
         # Data Cleanup and Aggregation
         df['MR_Clean'] = df['MR'].astype(str).str.replace('%', '', regex=False).astype(float) / 100.0
         
-        # Conditional Aggregation
+        # Conditional Aggregation 
         if group_by_col:
             # Two-Level Grouping
+            # Convert group column to string for consistent handling in groupby (since it might contain 'N/A')
             df[group_by_col] = df[group_by_col].astype(str)
             
             grouped_data_unstacked = df.groupby([group_by_col, main_category_col])[['IPC', 'MPKI', 'MR_Clean']].mean().unstack(fill_value=0)
@@ -107,6 +107,13 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 print("Error: The requested group-by column is empty")
                 sys.exit(1)
             
+            # NUMERICAL SORTING OF X-AXIS GROUPS
+            current_index = grouped_data_unstacked.index.tolist()
+            # Sort the index using the helper function to handle both numbers and 'N/A'
+            sorted_index = sorted(current_index, key=try_numeric)
+            # Reindex the DataFrame to apply the new numerical order
+            grouped_data_unstacked = grouped_data_unstacked.reindex(sorted_index)
+            
             main_categories = grouped_data_unstacked.columns.get_level_values(1).unique().tolist()
             x_labels = grouped_data_unstacked.index.tolist()
             plot_title_suffix = f"by {group_by_display_name}"
@@ -114,6 +121,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
         else:
             # Single-Level Grouping
             grouped_data_flat = df.groupby(main_category_col)[['IPC', 'MPKI', 'MR_Clean']].mean().reset_index()
+            # No special sorting needed for the primary category unless explicitly requested
             main_categories = grouped_data_flat[main_category_col].tolist()
             x_labels = main_categories 
             plot_title_suffix = f"by {main_category_col}"
@@ -161,7 +169,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 ax.set_xlabel(group_by_display_name, fontsize=12) 
 
             else:
-                # Plotting: Single-Level Bars
+                # Plotting: Single-Level Bars 
                 values = grouped_data_flat[metric_key].values * props['scale']
                 
                 rects = ax.bar(main_categories, values, color=bar_colors)
@@ -179,7 +187,7 @@ def create_bar_charts(directory_path, group_by_col, group_by_display_name, main_
                 ax.set_xticklabels(x_labels, rotation=0, ha='center') 
                 ax.set_xlabel(main_category_col, fontsize=12)
             
-            # inal Plot Styling (common to both)
+            # Final Plot Styling (common to both)
             main_title = f'{props["label"]} Comparison {plot_title_suffix}'
             
             if subtitle:
