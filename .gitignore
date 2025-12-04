@@ -17,6 +17,9 @@
 *.exe
 *.out
 
+# Python artifacts
+__pycache__/
+
 # IDE and editor files
 .vscode/
 .idea/
