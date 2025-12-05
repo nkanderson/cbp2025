@@ -17,6 +17,9 @@
 *.exe
 *.out
 
+# Python artifacts
+__pycache__/
+
 # IDE and editor files
 .vscode/
 .idea/
@@ -32,6 +35,7 @@ cbp_*
 # Results & data
 sample_results/
 branch_history_log.csv
+viz_traces/
 
 !perceptron_data/**/*.log
 perceptron_data/traces
